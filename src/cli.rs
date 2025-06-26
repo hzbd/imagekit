@@ -1,5 +1,6 @@
-use super::errors::ParseWatermarkPositionError;
+use super::errors::{ParseColorError, ParseWatermarkPositionError};
 use clap::Parser;
+use image::Rgba;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -34,6 +35,45 @@ pub struct Cli {
     /// （可选）水印文字大小 (单位: px)
     #[arg(long, default_value_t = 24)]
     pub font_size: u32,
+
+    /// （可选）水印颜色，格式为 RRGGBB (如 'FFFFFF') 或 RRGGBBAA (如 'FFFFFF80')
+    #[arg(long, default_value_t = HexColor(Rgba([255, 255, 255, 128])))]
+    pub watermark_color: HexColor,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct HexColor(pub Rgba<u8>);
+
+impl FromStr for HexColor {
+    type Err = ParseColorError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.strip_prefix('#').unwrap_or(s); // 允许带 # 前缀
+
+        if s.len() != 6 && s.len() != 8 {
+            return Err(ParseColorError(s.to_string()));
+        }
+
+        let r = u8::from_str_radix(&s[0..2], 16).map_err(|_| ParseColorError(s.to_string()))?;
+        let g = u8::from_str_radix(&s[2..4], 16).map_err(|_| ParseColorError(s.to_string()))?;
+        let b = u8::from_str_radix(&s[4..6], 16).map_err(|_| ParseColorError(s.to_string()))?;
+
+        // 如果提供了 alpha 通道，则解析它；否则默认为半透明 (128)
+        let a = if s.len() == 8 {
+            u8::from_str_radix(&s[6..8], 16).map_err(|_| ParseColorError(s.to_string()))?
+        } else {
+            128 // 如果只提供RRGGBB，alpha 默认设为半透明
+        };
+
+        Ok(HexColor(Rgba([r, g, b, a])))
+    }
+}
+
+// 为 clap 显示默认值需要 Display trait
+impl std::fmt::Display for HexColor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:02x}{:02x}{:02x}{:02x}", self.0[0], self.0[1], self.0[2], self.0[3])
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -59,4 +99,4 @@ impl std::fmt::Display for WatermarkPosition {
         // 将枚举转换为小写字符串
         write!(f, "{}", format!("{:?}", self).to_lowercase())
     }
-}
+}   

@@ -8,10 +8,12 @@
 ## ✨ 功能特性
 
 - **批量处理**: 递归地处理指定输入目录下的所有图片 (`jpg`, `png`, `gif`, `bmp`)。
-- **图片缩放**: 可选择按宽度、高度或两者同时调整图片尺寸。
+- **智能缩放**:
+    - 如果只提供宽度，则自动按比例计算高度。
+    - 如果只提供高度，则自动按比例计算宽度。
+    - 如果同时提供宽高，则精确缩放至指定尺寸（可能会拉伸）。
 - **文本水印**: 在图片的九个标准位置添加自定义文本水印。
 - **可定制水印**: 自由设置水印的文字内容、字体大小和位置。
-
 - **⚡ 极速性能**: 利用 [Rayon](https://github.com/rayon-rs/rayon) 库并行处理图片，充分利用多核 CPU 的性能。
 - **跨平台**: 可在 Windows, macOS, 和 Linux 上编译和运行。
 - **零依赖**: 编译后的可执行文件不依赖任何外部库，方便分发。
@@ -21,7 +23,6 @@
 你需要先安装 [Rust 和 Cargo](https://www.rust-lang.org/tools/install)。
 
 1.  **克隆仓库**
-    (请将 `hzbd` 替换为你的 GitHub 用户名)
     ```bash
     git clone https://github.com/hzbd/imagekit.git
     cd imagekit
@@ -54,29 +55,43 @@
 
 假设你有一个名为 `input_photos` 的文件夹，想把处理后的图片保存到 `processed_photos`。
 
-#### 示例 1: 仅调整所有图片宽度为 800px
-
+#### 示例 1: 将所有图片宽度缩放到 800px，高度按比例自动调整
+这是最常见的缩放场景，可以保证图片不变形。
 ```bash
 ./target/release/imagekit -i ./input_photos -o ./processed_photos --width 800
 ```
 
-#### 示例 2: 在右下角添加版权水印
-
+#### 示例 2: 将所有图片高度缩放到 600px，宽度按比例自动调整
 ```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --watermark-text "© 2023 My Photos" --watermark-position se --font-size 32
+./target/release/imagekit -i ./input_photos -o ./processed_photos --height 600
 ```
 
-#### 示例 3: 调整尺寸并添加居中水印
+#### 示例 3: 在右下角添加版权水印（不改变尺寸）
+```bash
+./target/release/imagekit -i ./input_photos -o ./processed_photos --watermark-text "© 2024 My Photos"
+```
 
+#### 示例 4: 强制缩放到 1920x1080 并添加居中水印
+如果你需要图片有精确的尺寸，即使会拉伸变形。
 ```bash
 ./target/release/imagekit \
     -i ./input_photos \
     -o ./processed_photos \
-    --width 1920 \
-    --height 1080 \
+    --width 600 \
+    --height 400 \
     --watermark-text "Vacation Memories" \
     --watermark-position center \
     --font-size 96
+```
+
+#### 示例 5: 添加一个半透明的红色水印
+```bash
+./target/release/imagekit \
+    -i ./input_photos \
+    -o ./processed_photos \
+    --watermark-text "DRAFT" \
+    --watermark-color FF000080 \
+    --font-size 128
 ```
 
 ## 📋 命令行选项
@@ -85,12 +100,12 @@
 | -------------------- | -------------------- | ----------------------------------------------------------------------- | --------- | -------- |
 | 输入目录             | `-i`, `--input-dir`  | 包含需要处理的图片的源目录。                                            | **必需**  | -        |
 | 输出目录             | `-o`, `--output-dir` | 用于存放处理后图片的目录。                                              | **必需**  | -        |
-| 宽度                 | `--width`            | （可选）调整图片的宽度（单位：像素）。                                  | 可选      | 原始宽度 |
-| 高度                 | `--height`           | （可选）调整图片的高度（单位：像素）。                                  | 可选      | 原始高度 |
+| 宽度                 | `--width`            | （可选）调整图片的宽度。若不提供高度，则按比例缩放。                    | 可选      | 原始宽度 |
+| 高度                 | `--height`           | （可选）调整图片的高度。若不提供宽度，则按比例缩放。                    | 可选      | 原始高度 |
 | 水印文字             | `--watermark-text`   | （可选）要添加的水印文字内容。                                          | 可选      | -        |
 | 水印位置             | `--watermark-position` | （可选）水印在图片上的位置。                                            | 可选      | `se`     |
 | 字体大小             | `--font-size`        | （可选）水印文字的大小（单位：像素）。                                  | 可选      | `24`     |
-
+| 水印颜色             | `--watermark-color`  | （可选）水印颜色，格式为 RRGGBB 或 RRGGBBAA。                           | 可选      | `FFFFFF80` (半透明白) |
 #### `watermark-position` 的可用值:
 
 -   `nw`: 左上 (North-West)
