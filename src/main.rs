@@ -1,5 +1,3 @@
-// src/main.rs
-
 use anyhow::Result;
 use clap::Parser;
 use imagekit::cli::Cli; // 从我们自己的库中导入 Cli

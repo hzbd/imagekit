@@ -1,6 +1,3 @@
-// src/lib.rs
-
-// 将所有模块声明在这里
 pub mod assets;
 pub mod cli;
 pub mod errors;
@@ -12,7 +9,6 @@ use rusttype::Font;
 use std::fs;
 use std::path::PathBuf;
 
-// 从我们的模块中导入需要的项
 use assets::Asset;
 use cli::Cli;
 use processor::process_image;
