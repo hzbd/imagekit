@@ -6,6 +6,8 @@
 
 **ImageKit** is a powerful, fast, and flexible command-line tool for batch image processing. Written in Rust, it leverages parallel processing to maximize performance, allowing you to effortlessly resize, control the quality of, and add highly customizable watermarks to entire directories of images.
 
+[中文](./README-zh.md)
+
 ## 🌟 Features
 
 - **Batch Processing**: Recursively processes all images (`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`) in a specified input directory.
