@@ -2,133 +2,135 @@
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/hzbd/imagekit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust Version](https://img.shields.io/badge/rust-1.87%2B-blue.svg)](https://www.rust-lang.org)
 
-**ImageKit** 是一个强大且快速的命令行工具，用于批量处理图片。它使用 Rust 编写，通过并行处理来最大化性能，让你能轻松地对整个目录的图片进行尺寸调整和添加水印。
+**ImageKit** is a powerful, fast, and flexible command-line tool for batch image processing. Written in Rust, it leverages parallel processing to maximize performance, allowing you to effortlessly resize and add highly customizable watermarks to entire directories of images.
 
-## ✨ 功能特性
+[中文](./README-zh.md)
 
-- **批量处理**: 递归地处理指定输入目录下的所有图片 (`jpg`, `png`, `gif`, `bmp`)。
-- **智能缩放**:
-    - 如果只提供宽度，则自动按比例计算高度。
-    - 如果只提供高度，则自动按比例计算宽度。
-    - 如果同时提供宽高，则精确缩放至指定尺寸（可能会拉伸）。
-- **文本水印**: 在图片的九个标准位置添加自定义文本水印。
-- **可定制水印**: 自由设置水印的文字内容、字体大小和位置。
-- **⚡ 极速性能**: 利用 [Rayon](https://github.com/rayon-rs/rayon) 库并行处理图片，充分利用多核 CPU 的性能。
-- **跨平台**: 可在 Windows, macOS, 和 Linux 上编译和运行。
-- **零依赖**: 编译后的可执行文件不依赖任何外部库，方便分发。
+## 🌟 Features
 
-## ⚙️ 安装与构建
+- **Batch Processing**: Recursively processes all images (`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`) in a specified input directory.
+- **Smart Scaling**:
+    - If only a width is provided, the height is calculated automatically to maintain the aspect ratio.
+    - If only a height is provided, the width is calculated automatically.
+    - If both are provided, the image is resized to the exact dimensions (which may cause stretching).
+- **Highly Customizable Watermarks**:
+    - Add text watermarks in nine standard positions.
+    - Freely set the text content and font size.
+    - **Custom Colors**: Precisely control watermark color and opacity using hex codes (e.g., `RRGGBB` or `RRGGBBAA`).
+- **Intelligent Watermark Scaling**: If the requested watermark is too large for an image, it is automatically scaled down to fit perfectly, ensuring it is never cropped.
+- **⚡ Blazing Fast Performance**: Utilizes the [Rayon](https://github.com/rayon-rs/rayon) library to process images in parallel, taking full advantage of multi-core CPUs.
+- **Cross-Platform**: Compiles and runs on Windows, macOS, and Linux.
+- **Zero-Dependency Binary**: The compiled executable is self-contained and requires no external libraries to run.
 
-你需要先安装 [Rust 和 Cargo](https://www.rust-lang.org/tools/install)。
+## ⚙️ Installation & Build
 
-1.  **克隆仓库**
+You will need to have [Rust and Cargo](https://www.rust-lang.org/tools/install) installed.
+
+1.  **Clone the Repository**
     ```bash
     git clone https://github.com/hzbd/imagekit.git
     cd imagekit
     ```
 
-2.  **构建项目**
-    为了获得最佳性能，我们构建 release 版本。
+2.  **Build the Project**
+    For optimal performance, build the release version.
     ```bash
     cargo build --release
     ```
 
-3.  **找到可执行文件**
-    构建完成后，可执行文件会位于 `target/release/` 目录下。
-    -   在 Windows 上是 `target/release/imagekit.exe`
-    -   在 macOS / Linux 上是 `target/release/imagekit`
+3.  **Locate the Executable**
+    After building, the executable will be located in the `target/release/` directory.
+    -   On Windows: `target\release\imagekit.exe`
+    -   On macOS / Linux: `target/release/imagekit`
 
-## 🚀 使用方法
+## 🚀 Usage
 
-### 基本语法
+### Basic Syntax
 
 ```bash
-# 在 Linux / macOS 上
-./target/release/imagekit --input-dir <输入目录> --output-dir <输出目录> [选项]
+# On Linux / macOS
+./target/release/imagekit --input-dir <INPUT_DIR> --output-dir <OUTPUT_DIR> [OPTIONS]
 
-# 在 Windows 上
-.\target\release\imagekit.exe --input-dir <输入目录> --output-dir <输出目录> [选项]
+# On Windows
+.\target\release\imagekit.exe --input-dir <INPUT_DIR> --output-dir <OUTPUT_DIR> [OPTIONS]
 ```
 
-### 示例
+### Examples
 
-假设你有一个名为 `input_photos` 的文件夹，想把处理后的图片保存到 `processed_photos`。
+Let's assume you have a folder named `input_photos` and want to save the processed images to `processed_photos`.
 
-#### 示例 1: 将所有图片宽度缩放到 800px，高度按比例自动调整
-这是最常见的缩放场景，可以保证图片不变形。
+#### Example 1: Resize all images to a width of 800px (maintaining aspect ratio)
+This is the most common use case for resizing, ensuring images are not distorted.
 ```bash
 ./target/release/imagekit -i ./input_photos -o ./processed_photos --width 800
 ```
 
-#### 示例 2: 将所有图片高度缩放到 600px，宽度按比例自动调整
-```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --height 600
-```
-
-#### 示例 3: 在右下角添加版权水印（不改变尺寸）
+#### Example 2: Add the default semi-transparent white copyright watermark
 ```bash
 ./target/release/imagekit -i ./input_photos -o ./processed_photos --watermark-text "© 2024 My Photos"
 ```
 
-#### 示例 4: 强制缩放到 1920x1080 并添加居中水印
-如果你需要图片有精确的尺寸，即使会拉伸变形。
+#### Example 3: Add an opaque black watermark
 ```bash
 ./target/release/imagekit \
     -i ./input_photos \
     -o ./processed_photos \
-    --width 600 \
-    --height 400 \
-    --watermark-text "Vacation Memories" \
-    --watermark-position center \
-    --font-size 96
+    --watermark-text "Confidential" \
+    --watermark-color 000000FF
 ```
+> **Tip**: If you provide only a 6-digit hex code (e.g., `000000`), the alpha channel will default to semi-transparent (`80`).
 
-#### 示例 5: 添加一个半透明的红色水印
+#### Example 4: Force resize to 1920x1080 and add a large, semi-transparent red watermark
 ```bash
 ./target/release/imagekit \
     -i ./input_photos \
     -o ./processed_photos \
+    --width 1920 \
+    --height 1080 \
     --watermark-text "DRAFT" \
-    --watermark-color FF000080 \
-    --font-size 128
+    --watermark-position center \
+    --font-size 128 \
+    --watermark-color "#FF000080"
 ```
 
-## 📋 命令行选项
+## 📋 Command-Line Options
 
-| 选项                 | 标志                 | 描述                                                                    | 必需/可选 | 默认值   |
-| -------------------- | -------------------- | ----------------------------------------------------------------------- | --------- | -------- |
-| 输入目录             | `-i`, `--input-dir`  | 包含需要处理的图片的源目录。                                            | **必需**  | -        |
-| 输出目录             | `-o`, `--output-dir` | 用于存放处理后图片的目录。                                              | **必需**  | -        |
-| 宽度                 | `--width`            | （可选）调整图片的宽度。若不提供高度，则按比例缩放。                    | 可选      | 原始宽度 |
-| 高度                 | `--height`           | （可选）调整图片的高度。若不提供宽度，则按比例缩放。                    | 可选      | 原始高度 |
-| 水印文字             | `--watermark-text`   | （可选）要添加的水印文字内容。                                          | 可选      | -        |
-| 水印位置             | `--watermark-position` | （可选）水印在图片上的位置。                                            | 可选      | `se`     |
-| 字体大小             | `--font-size`        | （可选）水印文字的大小（单位：像素）。                                  | 可选      | `24`     |
-| 水印颜色             | `--watermark-color`  | （可选）水印颜色，格式为 RRGGBB 或 RRGGBBAA。                           | 可选      | `FFFFFF80` (半透明白) |
-#### `watermark-position` 的可用值:
+| Option             | Flags                      | Description                                                               | Required/Optional | Default             |
+| ------------------ | -------------------------- | ------------------------------------------------------------------------- | ----------------- | ------------------- |
+| Input Directory    | `-i`, `--input-dir`        | The source directory containing images to process.                        | **Required**      | -                   |
+| Output Directory   | `-o`, `--output-dir`       | The directory where processed images will be saved.                       | **Required**      | -                   |
+| Width              | `--width`                  | (Optional) Resize image width. Scales proportionally if height is omitted. | Optional          | Original width      |
+| Height             | `--height`                 | (Optional) Resize image height. Scales proportionally if width is omitted. | Optional          | Original height     |
+| Watermark Text     | `--watermark-text`         | (Optional) The text content for the watermark.                            | Optional          | -                   |
+| Watermark Position | `--watermark-position`     | (Optional) The position of the watermark on the image.                    | Optional          | `se`                |
+| Font Size          | `--font-size`              | (Optional) The font size of the watermark text in pixels.                 | Optional          | `24`                |
+| Watermark Color    | `--watermark-color`        | (Optional) Watermark color in RRGGBB or RRGGBBAA hex format.              | Optional          | `FFFFFF80` (semi-transparent white) |
 
--   `nw`: 左上 (North-West)
--   `north`: 中上
--   `ne`: 右上 (North-East)
--   `west`: 中左
--   `center`: 居中
--   `east`: 中右
--   `sw`: 左下 (South-West)
--   `south`: 中下
--   `se`: 右下 (South-East)
+#### Available values for `watermark-position`:
 
-## 🛠️ 开发与测试
+-   `nw`: North-West (top-left)
+-   `north`: North (top-center)
+-   `ne`: North-East (top-right)
+-   `west`: West (middle-left)
+-   `center`: Center (middle-center)
+-   `east`: East (middle-right)
+-   `sw`: South-West (bottom-left)
+-   `south`: South (bottom-center)
+-   `se`: South-East (bottom-right)
 
-如果你想为此项目贡献代码，可以按以下步骤操作：
+## 🛠️ Development & Testing
 
-1.  克隆仓库。
-2.  做出你的修改。
-3.  运行测试以确保所有功能正常：
+If you'd like to contribute to the project:
+
+1.  Clone the repository.
+2.  Make your changes.
+3.  Run tests to ensure all functionality is working as expected:
     ```bash
     cargo test
     ```
 
-## 📜 许可证
+## 📜 License
 
-本项目使用 [MIT 许可证](LICENSE)。
+This project is licensed under the [MIT License](LICENSE).
