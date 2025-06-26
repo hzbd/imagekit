@@ -1,10 +1,11 @@
+use super::cli::{Cli, HexColor, WatermarkPosition};
 use anyhow::Result;
-use image::{DynamicImage, GenericImage, GenericImageView, Pixel};
-// use imageproc::definitions::Clamp; // 用于颜色通道计算
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+use image::{DynamicImage, GenericImage, GenericImageView, ImageEncoder, Pixel};
 use rusttype::{point, Font, Scale};
 use std::fs;
+use std::io::BufWriter;
 use std::path::Path;
-use super::cli::{Cli, HexColor, WatermarkPosition};
 
 /// 处理单张图片的核心函数
 pub fn process_image(path: &Path, cli: &Cli, font: &Font) -> Result<()> {
@@ -32,10 +33,7 @@ pub fn process_image(path: &Path, cli: &Cli, font: &Font) -> Result<()> {
                 (w.max(1), h)
             } else { (original_width, h) }
         },
-        (Some(w), Some(h)) => {
-            needs_resize = true;
-            (w, h)
-        },
+        (Some(w), Some(h)) => { needs_resize = true; (w, h) },
         (None, None) => (original_width, original_height),
     };
 
@@ -54,7 +52,31 @@ pub fn process_image(path: &Path, cli: &Cli, font: &Font) -> Result<()> {
         fs::create_dir_all(parent)?;
     }
 
-    img.save(&output_path)?;
+    // 图片保存逻辑，根据 --quality 参数进行处理
+    let file = fs::File::create(&output_path)?;
+    let writer = BufWriter::new(file);
+
+    let ext = output_path.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+
+    match ext.as_str() {
+        "jpg" | "jpeg" => {
+            let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(writer, cli.quality);
+            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color())?;
+        },
+        "png" => {
+            let compression = match cli.quality {
+                100 => CompressionType::Best,
+                1..=50 => CompressionType::Fast,
+                _ => CompressionType::Default,
+            };
+            let encoder = PngEncoder::new_with_quality(writer, compression, FilterType::Sub);
+            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color())?;
+        },
+        _ => {
+            img.save(&output_path)?;
+        }
+    }
+
     println!("Saved to {}", output_path.display());
     Ok(())
 }
@@ -75,11 +97,13 @@ fn calculate_text_dimensions(font: &Font, scale: Scale, text: &str) -> (u32, u32
 }
 
 /// 在图片上绘制水印，并能自动缩小过大的水印，同时精确定位。
-///
-/// 此函数通过手动遍历字形并绘制每个像素来实现像素级精确定位，
-/// 从而完全绕开 imageproc 的便利性函数。
+/// 此函数通过手动遍历字形并绘制每个像素来实现像素级精确定位。
 pub fn add_watermark(
-    img: &mut DynamicImage, text: &str, font: &Font, font_size: u32, position: WatermarkPosition,
+    img: &mut DynamicImage,
+    text: &str,
+    font: &Font,
+    font_size: u32,
+    position: WatermarkPosition,
     color: HexColor,
 ) {
     let padding = 10u32;
@@ -134,25 +158,17 @@ pub fn add_watermark(
     for g in glyphs {
         if let Some(bb) = g.pixel_bounding_box() {
             g.draw(|x, y, v| {
-                // v 是 [0, 1] 范围的像素覆盖率
                 if v > 0.0 {
                     let px = (bb.min.x + x as i32) as u32;
                     let py = (bb.min.y + y as i32) as u32;
 
-                    // 确保像素在图片范围内
                     if px < img_width && py < img_height {
-                        // 创建一个基于覆盖率的、半透明的白色像素
-                        let weighted_color = {
-                            let mut color = watermark_color;
-                            color.0[3] = (color.0[3] as f32 * v) as u8;
-                            color
-                        };
+                        let mut weighted_color = watermark_color;
+                        weighted_color.0[3] = (weighted_color.0[3] as f32 * v) as u8;
 
-                        // 获取背景像素并进行 Alpha 混合
                         let mut background_pixel = img.get_pixel(px, py);
                         background_pixel.blend(&weighted_color);
 
-                        // 将混合后的像素画回图片
                         img.put_pixel(px, py, background_pixel);
                     }
                 }

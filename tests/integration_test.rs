@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use image::{DynamicImage, GenericImageView, Rgba};
 use tempfile::tempdir;
+use std::fs;
 
 // 导入我们库中的公共项
 use imagekit::{
@@ -22,23 +23,15 @@ fn test_watermark_position_from_str() {
 #[test]
 fn test_hex_color_parsing() {
     use std::str::FromStr;
-    // 测试带 #
     let color = HexColor::from_str("#FF000080").unwrap();
     assert_eq!(color.0, Rgba([255, 0, 0, 128]));
-
-    // 测试不带 #
     let color = HexColor::from_str("00FF00").unwrap();
-    assert_eq!(color.0, Rgba([0, 255, 0, 128])); // 默认 alpha
-
-    // 测试大小写不敏感
+    assert_eq!(color.0, Rgba([0, 255, 0, 128])); // 测试默认 alpha
     let color = HexColor::from_str("0000ffAA").unwrap();
     assert_eq!(color.0, Rgba([0, 0, 255, 170]));
-
-    // 测试错误格式
     assert!(HexColor::from_str("12345").is_err());
     assert!(HexColor::from_str("GGFFFF").is_err());
 }
-
 
 /// 单元测试：验证 `add_watermark` 函数是否确实修改了图片。
 #[test]
@@ -52,7 +45,6 @@ fn test_add_watermark_logic() -> Result<()> {
     let font = rusttype::Font::try_from_bytes(font_data.data.as_ref())
         .context("Failed to parse font from embedded data in test")?;
 
-    // --- 修正点：添加颜色参数 ---
     let default_color = HexColor(Rgba([255, 255, 255, 128]));
     add_watermark(&mut img, "Test", &font, 20, WatermarkPosition::Se, default_color);
 
@@ -73,12 +65,10 @@ fn test_full_run_with_resize_and_watermark() -> Result<()> {
     let output_dir = tempdir()?;
 
     let test_image_path = input_dir.path().join("test.png");
-    let initial_image = image::RgbaImage::from_pixel(200, 200, Rgba([0, 0, 0, 0]));
-    initial_image.save(&test_image_path)?;
+    image::RgbaImage::from_pixel(200, 200, Rgba([0, 0, 0, 0])).save(&test_image_path)?;
 
-    let original_bytes = std::fs::read(&test_image_path)?;
+    let original_bytes = fs::read(&test_image_path)?;
 
-    // --- 修正点：为 Cli 实例添加 watermark_color ---
     let cli = Cli {
         input_dir: input_dir.path().to_path_buf(),
         output_dir: output_dir.path().to_path_buf(),
@@ -87,7 +77,8 @@ fn test_full_run_with_resize_and_watermark() -> Result<()> {
         watermark_text: Some("Integration Test".to_string()),
         watermark_position: WatermarkPosition::Center,
         font_size: 16,
-        watermark_color: HexColor(Rgba([255, 255, 255, 128])), // 添加默认颜色
+        watermark_color: HexColor(Rgba([255, 255, 255, 128])),
+        quality: 85, // 使用新的 quality 字段
     };
 
     run(cli)?;
@@ -95,7 +86,7 @@ fn test_full_run_with_resize_and_watermark() -> Result<()> {
     let output_image_path = output_dir.path().join("test.png");
     assert!(output_image_path.exists(), "Output image was not created");
 
-    let processed_bytes = std::fs::read(&output_image_path)?;
+    let processed_bytes = fs::read(&output_image_path)?;
     assert_ne!(original_bytes, processed_bytes, "Image content did not change after processing");
 
     let output_img = image::open(&output_image_path)?;
@@ -113,7 +104,6 @@ fn test_run_proportional_resize_by_width() -> Result<()> {
     let test_image_path = input_dir.path().join("tall_image.png");
     image::RgbaImage::new(200, 400).save(&test_image_path)?;
 
-    // --- 修正点：为 Cli 实例添加 watermark_color ---
     let cli = Cli {
         input_dir: input_dir.path().to_path_buf(),
         output_dir: output_dir.path().to_path_buf(),
@@ -122,7 +112,8 @@ fn test_run_proportional_resize_by_width() -> Result<()> {
         watermark_text: None,
         watermark_position: WatermarkPosition::Se,
         font_size: 24,
-        watermark_color: HexColor(Rgba([255, 255, 255, 128])), // 添加默认颜色
+        watermark_color: HexColor(Rgba([255, 255, 255, 128])),
+        quality: 85, // 使用新的 quality 字段
     };
 
     run(cli)?;
@@ -145,7 +136,6 @@ fn test_run_proportional_resize_by_height() -> Result<()> {
     let test_image_path = input_dir.path().join("wide_image.png");
     image::RgbaImage::new(400, 200).save(&test_image_path)?;
 
-    // --- 修正点：为 Cli 实例添加 watermark_color ---
     let cli = Cli {
         input_dir: input_dir.path().to_path_buf(),
         output_dir: output_dir.path().to_path_buf(),
@@ -154,7 +144,8 @@ fn test_run_proportional_resize_by_height() -> Result<()> {
         watermark_text: None,
         watermark_position: WatermarkPosition::Se,
         font_size: 24,
-        watermark_color: HexColor(Rgba([255, 255, 255, 128])), // 添加默认颜色
+        watermark_color: HexColor(Rgba([255, 255, 255, 128])),
+        quality: 85, // 使用新的 quality 字段
     };
 
     run(cli)?;
@@ -180,24 +171,62 @@ fn test_watermark_autoscales_down_when_too_large() -> Result<()> {
     let font = rusttype::Font::try_from_bytes(font_data.data.as_ref())
         .context("Failed to parse font from embedded data in test")?;
 
-    // --- 修正点：添加颜色参数 ---
     add_watermark(
         &mut img,
         "This text is definitely too long",
         &font,
         40,
         WatermarkPosition::Center,
-        HexColor(Rgba([255, 255, 255, 128])), // 添加默认颜色
+        HexColor(Rgba([255, 255, 255, 128])),
     );
 
     let processed_img_bytes = img.as_bytes().to_vec();
     assert_ne!(original_img_bytes, processed_img_bytes, "Watermark should have been applied");
 
     let black = Rgba([0, 0, 0, 255]);
-    assert_eq!(img.get_pixel(0, 0), black, "Top-left corner should not be touched by watermark");
-    assert_eq!(img.get_pixel(99, 0), black, "Top-right corner should not be touched by watermark");
-    assert_eq!(img.get_pixel(0, 49), black, "Bottom-left corner should not be touched by watermark");
-    assert_eq!(img.get_pixel(99, 49), black, "Bottom-right corner should not be touched by watermark");
+    assert_eq!(img.get_pixel(0, 0), black);
+    assert_eq!(img.get_pixel(99, 0), black);
+    assert_eq!(img.get_pixel(0, 49), black);
+    assert_eq!(img.get_pixel(99, 49), black);
+
+    Ok(())
+}
+
+/// 新增测试：验证质量参数是否对文件大小产生影响
+#[test]
+fn test_quality_options_affect_file_size() -> Result<()> {
+    let input_dir = tempdir()?;
+    let test_image_path = input_dir.path().join("quality_test.jpg");
+    image::RgbImage::new(200, 200).save(&test_image_path)?;
+
+    // 1. 使用低质量保存
+    let low_q_output_dir = tempdir()?;
+    let cli_low = Cli {
+        input_dir: input_dir.path().to_path_buf(),
+        output_dir: low_q_output_dir.path().to_path_buf(),
+        quality: 10,
+        width: None, height: None, watermark_text: None,
+        watermark_position: WatermarkPosition::Se, font_size: 24,
+        watermark_color: HexColor(Rgba([255,255,255,128])),
+    };
+    run(cli_low)?;
+    let low_q_size = fs::metadata(low_q_output_dir.path().join("quality_test.jpg"))?.len();
+
+    // 2. 使用高质量保存
+    let high_q_output_dir = tempdir()?;
+    let cli_high = Cli {
+        input_dir: input_dir.path().to_path_buf(),
+        output_dir: high_q_output_dir.path().to_path_buf(),
+        quality: 100,
+        width: None, height: None, watermark_text: None,
+        watermark_position: WatermarkPosition::Se, font_size: 24,
+        watermark_color: HexColor(Rgba([255,255,255,128])),
+    };
+    run(cli_high)?;
+    let high_q_size = fs::metadata(high_q_output_dir.path().join("quality_test.jpg"))?.len();
+
+    println!("Low-Q: {}, High-Q: {}", low_q_size, high_q_size);
+    assert!(low_q_size < high_q_size, "Low quality JPEG should be smaller than high quality JPEG");
 
     Ok(())
 }

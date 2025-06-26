@@ -2,23 +2,23 @@
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/hzbd/imagekit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust Version](https://img.shields.io/badge/rust-1.87%2B-blue.svg)](https://www.rust-lang.org)
 
-**ImageKit** 是一个强大且快速的命令行工具，用于批量处理图片。它使用 Rust 编写，通过并行处理来最大化性能，让你能轻松地对整个目录的图片进行尺寸调整和添加水印。
+**ImageKit** 是一个强大、快速且灵活的命令行工具，用于批量处理图片。它使用 Rust 编写，通过并行处理来最大化性能，让你能轻松地对整个目录的图片进行尺寸调整、质量控制和添加高度可定制的水印。
 
-[English](./README.md)
+## 🌟 功能特性
 
-## ✨ 功能特性
-
-- **批量处理**: 递归地处理指定输入目录下的所有图片 (`jpg`, `png`, `gif`, `bmp`)。
+- **批量处理**: 递归地处理指定输入目录下的所有图片 (`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`)。
 - **智能缩放**:
-    - 如果只提供宽度，则自动按比例计算高度。
+    - 如果只提供宽度，则自动按比例计算高度，保证图片不变形。
     - 如果只提供高度，则自动按比例计算宽度。
-    - 如果同时提供宽高，则精确缩放至指定尺寸（可能会拉伸）。
-- **文本水印**: 在图片的九个标准位置添加自定义文本水印。
-- **可定制水印**: 自由设置水印的文字内容、字体大小和位置。
+- **质量控制**: 使用 `-q` 或 `--quality` 参数（1-100）微调输出质量，在文件大小和视觉保真度之间取得平衡。设置为 `100` 可获得最佳质量。
+- **高度可定制的水印**:
+    - 在图片的九个标准位置添加自定义文本水印。
+    - **自定义颜色**: 通过十六进制色码（如 `RRGGBB` 或 `RRGGBBAA`）精确控制水印颜色和透明度。
+- **智能水印缩放**: 如果请求的水印对于图片来说过大，工具会自动缩小水印以确保其完整显示，永不裁切。
 - **⚡ 极速性能**: 利用 [Rayon](https://github.com/rayon-rs/rayon) 库并行处理图片，充分利用多核 CPU 的性能。
 - **跨平台**: 可在 Windows, macOS, 和 Linux 上编译和运行。
-- **零依赖**: 编译后的可执行文件不依赖任何外部库，方便分发。
 
 ## ⚙️ 安装与构建
 
@@ -31,70 +31,38 @@
     ```
 
 2.  **构建项目**
-    为了获得最佳性能，我们构建 release 版本。
     ```bash
     cargo build --release
     ```
 
 3.  **找到可执行文件**
-    构建完成后，可执行文件会位于 `target/release/` 目录下。
-    -   在 Windows 上是 `target/release/imagekit.exe`
-    -   在 macOS / Linux 上是 `target/release/imagekit`
+    构建完成后，可执行文件位于 `target/release/` 目录下。
 
 ## 🚀 使用方法
 
-### 基本语法
-
-```bash
-# 在 Linux / macOS 上
-./target/release/imagekit --input-dir <输入目录> --output-dir <输出目录> [选项]
-
-# 在 Windows 上
-.\target\release\imagekit.exe --input-dir <输入目录> --output-dir <输出目录> [选项]
-```
-
 ### 示例
 
-假设你有一个名为 `input_photos` 的文件夹，想把处理后的图片保存到 `processed_photos`。
-
-#### 示例 1: 将所有图片宽度缩放到 800px，高度按比例自动调整
-这是最常见的缩放场景，可以保证图片不变形。
+#### 示例 1: 缩放图片并以最高质量保存
+如果你希望调整尺寸但不损失图片质量，请使用 `--quality 100`。
 ```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --width 800
+./target/release/imagekit -i ./input_photos -o ./processed_photos --width 1024 --quality 100
 ```
 
-#### 示例 2: 将所有图片高度缩放到 600px，宽度按比例自动调整
+#### 示例 2: 缩放图片并指定一个中等质量等级
+在文件大小和质量之间取得一个很好的平衡。
 ```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --height 600
+./target/release/imagekit -i ./input_photos -o ./processed_photos --width 1024 -q 75
 ```
 
-#### 示例 3: 在右下角添加版权水印（不改变尺寸）
-```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --watermark-text "© 2024 My Photos"
-```
-
-#### 示例 4: 强制缩放到 1920x1080 并添加居中水印
-如果你需要图片有精确的尺寸，即使会拉伸变形。
+#### 示例 3: 添加一个不透明的黑色水印（使用默认质量 85）
 ```bash
 ./target/release/imagekit \
     -i ./input_photos \
     -o ./processed_photos \
-    --width 600 \
-    --height 400 \
-    --watermark-text "Vacation Memories" \
-    --watermark-position center \
-    --font-size 96
+    --watermark-text "Confidential" \
+    --watermark-color 000000FF
 ```
-
-#### 示例 5: 添加一个半透明的红色水印
-```bash
-./target/release/imagekit \
-    -i ./input_photos \
-    -o ./processed_photos \
-    --watermark-text "DRAFT" \
-    --watermark-color FF000080 \
-    --font-size 128
-```
+> **提示**: 如果只提供6位颜色码（如 `000000`），alpha 通道会默认为半透明 (`80`)。
 
 ## 📋 命令行选项
 
@@ -108,6 +76,8 @@
 | 水印位置             | `--watermark-position` | （可选）水印在图片上的位置。                                            | 可选      | `se`     |
 | 字体大小             | `--font-size`        | （可选）水印文字的大小（单位：像素）。                                  | 可选      | `24`     |
 | 水印颜色             | `--watermark-color`  | （可选）水印颜色，格式为 RRGGBB 或 RRGGBBAA。                           | 可选      | `FFFFFF80` (半透明白) |
+| 质量                 | `-q`, `--quality`    | （可选）设置输出质量(1-100)。对于JPEG，影响压缩率；对于PNG，影响压缩速度。 | 可选      | `85`     |
+
 #### `watermark-position` 的可用值:
 
 -   `nw`: 左上 (North-West)

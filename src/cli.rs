@@ -39,6 +39,10 @@ pub struct Cli {
     /// （可选）水印颜色，格式为 RRGGBB (如 'FFFFFF') 或 RRGGBBAA (如 'FFFFFF80')
     #[arg(long, default_value_t = HexColor(Rgba([255, 255, 255, 128])))]
     pub watermark_color: HexColor,
+
+    /// (可选) 设置输出质量 (1-100)。对于JPEG，这直接影响压缩率。对于PNG，它影响压缩时间和文件大小。
+    #[arg(short, long, default_value_t = 85, value_parser = clap::value_parser!(u8).range(1..=100))]
+    pub quality: u8,
 }
 
 #[derive(Debug, Clone, Copy)]
