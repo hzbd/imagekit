@@ -1,6 +1,6 @@
-## ref for free images
+## free images 
 
-[Pexels Photo](https://www.pexels.com/search/4k%20city/)
+[Pexels Photo - www.pexels.com](https://www.pexels.com/search/4k%20city/)
 
 ## test
 
