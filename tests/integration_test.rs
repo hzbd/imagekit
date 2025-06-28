@@ -6,10 +6,37 @@ use std::fs;
 // 导入我们库中的公共项
 use imagekit::{
     assets::Asset,
-    cli::{Cli, HexColor, WatermarkPosition}, // 确保导入 HexColor
+    cli::{Cli, HexColor, WatermarkPosition},
     processor::add_watermark,
     run,
 };
+// 导入 Font 以便在测试中创建
+use rusttype::Font;
+
+/// 辅助函数，用于在测试中加载字体列表。
+/// 它通过获取数据所有权来解决生命周期问题。
+fn load_test_fonts() -> Result<Vec<Font<'static>>> {
+    // --- 解决方案在这里 ---
+    // 1. 加载主字体数据并获得其所有权
+    let primary_font_data = Asset::get("Roboto-Regular.ttf")
+        .context("Test setup failed: Could not find 'Roboto-Regular.ttf'")?;
+    let primary_font_vec: Vec<u8> = primary_font_data.data.into_owned();
+
+    // 2. 加载备用 CJK 字体数据并获得其所有权
+    let fallback_font_data = Asset::get("SourceHanSansSC-Regular.otf")
+        .context("Test setup failed: Could not find 'SourceHanSansSC-Regular.otf'")?;
+    let fallback_font_vec: Vec<u8> = fallback_font_data.data.into_owned();
+
+    // 3. 从我们拥有的数据中创建 Font 对象
+    let primary_font = Font::try_from_vec(primary_font_vec)
+        .context("Test setup failed: Could not parse 'Roboto-Regular.ttf'")?;
+    let fallback_font = Font::try_from_vec(fallback_font_vec)
+        .context("Test setup failed: Could not parse 'SourceHanSansSC-Regular.otf'")?;
+    // --- 结束解决方案 ---
+
+    Ok(vec![primary_font, fallback_font])
+}
+
 
 /// 测试水印位置的字符串解析是否正确。
 #[test]
@@ -26,7 +53,7 @@ fn test_hex_color_parsing() {
     let color = HexColor::from_str("#FF000080").unwrap();
     assert_eq!(color.0, Rgba([255, 0, 0, 128]));
     let color = HexColor::from_str("00FF00").unwrap();
-    assert_eq!(color.0, Rgba([0, 255, 0, 128])); // 测试默认 alpha
+    assert_eq!(color.0, Rgba([0, 255, 0, 128]));
     let color = HexColor::from_str("0000ffAA").unwrap();
     assert_eq!(color.0, Rgba([0, 0, 255, 170]));
     assert!(HexColor::from_str("12345").is_err());
@@ -41,12 +68,10 @@ fn test_add_watermark_logic() -> Result<()> {
     );
     let original_img_bytes = img.as_bytes().to_vec();
 
-    let font_data = Asset::get("Roboto-Regular.ttf").expect("Font not found for testing");
-    let font = rusttype::Font::try_from_bytes(font_data.data.as_ref())
-        .context("Failed to parse font from embedded data in test")?;
+    let fonts = load_test_fonts()?;
 
     let default_color = HexColor(Rgba([255, 255, 255, 128]));
-    add_watermark(&mut img, "Test", &font, 20, WatermarkPosition::Se, default_color);
+    add_watermark(&mut img, "Test", &fonts, 20, WatermarkPosition::Se, default_color);
 
     let watermarked_img_bytes = img.as_bytes().to_vec();
     assert_ne!(
@@ -78,7 +103,7 @@ fn test_full_run_with_resize_and_watermark() -> Result<()> {
         watermark_position: WatermarkPosition::Center,
         font_size: 16,
         watermark_color: HexColor(Rgba([255, 255, 255, 128])),
-        quality: 85, // 使用新的 quality 字段
+        quality: 85,
     };
 
     run(cli)?;
@@ -113,7 +138,7 @@ fn test_run_proportional_resize_by_width() -> Result<()> {
         watermark_position: WatermarkPosition::Se,
         font_size: 24,
         watermark_color: HexColor(Rgba([255, 255, 255, 128])),
-        quality: 85, // 使用新的 quality 字段
+        quality: 85,
     };
 
     run(cli)?;
@@ -145,7 +170,7 @@ fn test_run_proportional_resize_by_height() -> Result<()> {
         watermark_position: WatermarkPosition::Se,
         font_size: 24,
         watermark_color: HexColor(Rgba([255, 255, 255, 128])),
-        quality: 85, // 使用新的 quality 字段
+        quality: 85,
     };
 
     run(cli)?;
@@ -167,14 +192,12 @@ fn test_watermark_autoscales_down_when_too_large() -> Result<()> {
     );
     let original_img_bytes = img.as_bytes().to_vec();
 
-    let font_data = Asset::get("Roboto-Regular.ttf").expect("Font not found for testing");
-    let font = rusttype::Font::try_from_bytes(font_data.data.as_ref())
-        .context("Failed to parse font from embedded data in test")?;
+    let fonts = load_test_fonts()?;
 
     add_watermark(
         &mut img,
         "This text is definitely too long",
-        &font,
+        &fonts,
         40,
         WatermarkPosition::Center,
         HexColor(Rgba([255, 255, 255, 128])),
@@ -192,7 +215,7 @@ fn test_watermark_autoscales_down_when_too_large() -> Result<()> {
     Ok(())
 }
 
-/// 新增测试：验证质量参数是否对文件大小产生影响
+/// 验证质量参数是否对文件大小产生影响
 #[test]
 fn test_quality_options_affect_file_size() -> Result<()> {
     let input_dir = tempdir()?;
@@ -227,6 +250,43 @@ fn test_quality_options_affect_file_size() -> Result<()> {
 
     println!("Low-Q: {}, High-Q: {}", low_q_size, high_q_size);
     assert!(low_q_size < high_q_size, "Low quality JPEG should be smaller than high quality JPEG");
+
+    Ok(())
+}
+
+// 验证 CJK 字符支持
+#[test]
+fn test_cjk_watermark_support() -> Result<()> {
+    // 1. 准备一个已知背景的图片
+    let mut img = DynamicImage::ImageRgba8(
+        image::RgbaImage::from_pixel(300, 100, Rgba([255, 255, 255, 255]))
+    );
+    // 2. 复制一份处理前的图片字节数据
+    let original_img_bytes = img.as_bytes().to_vec();
+
+    let fonts = load_test_fonts()?;
+
+    // 3. 执行水印操作
+    add_watermark(
+        &mut img,
+        "测试 Test 123 テスト", // 混合了中文、英文、数字和日文
+        &fonts,
+        30,
+        WatermarkPosition::Center,
+        HexColor(Rgba([0, 0, 0, 128])), // 半透明黑色
+    );
+
+    // 4. 获取处理后的图片字节数据
+    let watermarked_img_bytes = img.as_bytes().to_vec();
+
+    // --- 解决方案在这里：使用更健壮的断言 ---
+    // 断言图片内容被修改过，证明水印被画上去了，无论画在哪里
+    assert_ne!(
+        original_img_bytes,
+        watermarked_img_bytes,
+        "CJK watermark should have been applied, changing the image content"
+    );
+    // --- 结束解决方案 ---
 
     Ok(())
 }

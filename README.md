@@ -15,10 +15,11 @@
     - If only a width is provided, the height is calculated automatically to maintain the aspect ratio.
     - If only a height is provided, the width is calculated automatically.
 - **Quality Control**: Use the `-q` or `--quality` flag (1-100) to fine-tune the output quality, balancing file size and visual fidelity. Set to `100` for the best possible quality.
-- **Highly Customizable Watermarks**:
-    - Add text watermarks in nine standard positions.
+- **Powerful Watermarking**:
+    - **Multi-language Support**: Perfectly renders watermarks with mixed text, including **Chinese, Japanese, Korean (CJK)**, and Latin characters.
+    - **Highly Customizable**: Add text watermarks in nine standard positions and freely set the font size.
     - **Custom Colors**: Precisely control watermark color and opacity using hex codes (e.g., `RRGGBB` or `RRGGBBAA`).
-- **Intelligent Watermark Scaling**: If the requested watermark is too large for an image, it is automatically scaled down to fit perfectly, ensuring it is never cropped.
+    - **Intelligent Watermark Scaling**: If the requested watermark is too large for an image, it is automatically scaled down to fit perfectly, ensuring it is never cropped.
 - **⚡ Blazing Fast Performance**: Utilizes the [Rayon](https://github.com/rayon-rs/rayon) library to process images in parallel, taking full advantage of multi-core CPUs.
 - **Cross-Platform**: Compiles and runs on Windows, macOS, and Linux.
 
@@ -32,28 +33,35 @@ You will need to have [Rust and Cargo](https://www.rust-lang.org/tools/install) 
     cd imagekit
     ```
 
-2.  **Build the Project**
+2.  **Prepare Fonts**
+    This tool uses a font fallback system for multi-language support. Please ensure the `assets/` directory contains:
+    *   `Roboto-Regular.ttf` (for Western characters)
+    *   A font with CJK support, such as `SourceHanSansSC-Regular.otf` (Source Han Sans). You can download it from [Adobe Fonts GitHub](https://github.com/adobe-fonts/source-han-sans/releases).
+
+3.  **Build the Project**
     ```bash
     cargo build --release
     ```
 
-3.  **Locate the Executable**
+4.  **Locate the Executable**
     After building, the executable will be located in the `target/release/` directory.
 
 ## 🚀 Usage
 
 ### Examples
 
-#### Example 1: Resize images and save at maximum quality
-If you want to resize without losing quality, use `--quality 100`.
+#### Example 1: Add a watermark with mixed Chinese and English text
 ```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --width 1024 --quality 100
+./target/release/imagekit \
+    -i ./input_photos \
+    -o ./processed_photos \
+    --watermark-text "你好, World! - Test Watermark"
 ```
 
-#### Example 2: Resize images and set a medium quality level
-A good balance between file size and quality.
+#### Example 2: Resize images and save at maximum quality
+If you want to resize without quality loss for JPEGs, use `--quality 100`.
 ```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --width 1024 -q 75
+./target/release/imagekit -i ./input_photos -o ./processed_photos --width 1024 --quality 100
 ```
 
 #### Example 3: Add an opaque black watermark (using default quality 85)
@@ -64,7 +72,6 @@ A good balance between file size and quality.
     --watermark-text "Confidential" \
     --watermark-color 000000FF
 ```
-> **Tip**: If you provide only a 6-digit hex code (e.g., `000000`), the alpha channel will default to semi-transparent (`80`).
 
 ## 📋 Command-Line Options
 
@@ -82,21 +89,15 @@ A good balance between file size and quality.
 
 #### Available values for `watermark-position`:
 
--   `nw`: North-West (top-left)
--   `north`: North (top-center)
--   `ne`: North-East (top-right)
--   `west`: West (middle-left)
--   `center`: Center (middle-center)
--   `east`: East (middle-right)
--   `sw`: South-West (bottom-left)
--   `south`: South (bottom-center)
--   `se`: South-East (bottom-right)
+-   `nw`: North-West, `north`: North, `ne`: North-East
+-   `west`: West, `center`: Center, `east`: East
+-   `sw`: South-West, `south`: South, `se`: South-East
 
 ## 🛠️ Development & Testing
 
 If you'd like to contribute to the project:
 
-1.  Clone the repository.
+1.  Clone the repository and prepare the fonts.
 2.  Make your changes.
 3.  Run tests to ensure all functionality is working as expected:
     ```bash
