@@ -4,43 +4,43 @@ use image::Rgba;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-/// 一个强大且易于使用的图片压缩和优化工具
+/// A powerful and easy-to-use image compression and optimization tool.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
-    /// 输入目录，包含需要处理的图片
+    /// The input directory containing images to process.
     #[arg(short, long)]
     pub input_dir: PathBuf,
 
-    /// 输出目录，用于存放处理后的图片
+    /// The output directory for the processed images.
     #[arg(short, long)]
     pub output_dir: PathBuf,
 
-    /// （可选）调整图片的宽度
+    /// (Optional) The target width for resizing the image.
     #[arg(long)]
     pub width: Option<u32>,
 
-    /// （可选）调整图片的高度
+    /// (Optional) The target height for resizing the image.
     #[arg(long)]
     pub height: Option<u32>,
 
-    /// （可选）水印文字内容
+    /// (Optional) The text for the watermark.
     #[arg(long)]
     pub watermark_text: Option<String>,
 
-    /// （可选）水印位置
+    /// (Optional) The position of the watermark.
     #[arg(long, default_value_t = WatermarkPosition::Se, help="[possible values: nw, north, ne, west, center, east, sw, south, se]")]
     pub watermark_position: WatermarkPosition,
 
-    /// （可选）水印文字大小 (单位: px)
+    /// (Optional) The font size for the watermark text (in pixels).
     #[arg(long, default_value_t = 24)]
     pub font_size: u32,
 
-    /// （可选）水印颜色，格式为 RRGGBB (如 'FFFFFF') 或 RRGGBBAA (如 'FFFFFF80')
+    /// (Optional) The color of the watermark, in RRGGBB (e.g., 'FFFFFF') or RRGGBBAA (e.g., 'FFFFFF80') hex format.
     #[arg(long, default_value_t = HexColor(Rgba([255, 255, 255, 128])))]
     pub watermark_color: HexColor,
 
-    /// (可选) 设置输出质量 (1-100)。对于JPEG，这直接影响压缩率。对于PNG，它影响压缩时间和文件大小。
+    /// (Optional) The output quality (1-100). For JPEG, this directly affects the compression ratio. For PNG, it affects compression time and file size.
     #[arg(short, long, default_value_t = 85, value_parser = clap::value_parser!(u8).range(1..=100))]
     pub quality: u8,
 }
@@ -52,7 +52,7 @@ impl FromStr for HexColor {
     type Err = ParseColorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.strip_prefix('#').unwrap_or(s); // 允许带 # 前缀
+        let s = s.strip_prefix('#').unwrap_or(s); // Allow an optional '#' prefix
 
         if s.len() != 6 && s.len() != 8 {
             return Err(ParseColorError(s.to_string()));
@@ -62,18 +62,18 @@ impl FromStr for HexColor {
         let g = u8::from_str_radix(&s[2..4], 16).map_err(|_| ParseColorError(s.to_string()))?;
         let b = u8::from_str_radix(&s[4..6], 16).map_err(|_| ParseColorError(s.to_string()))?;
 
-        // 如果提供了 alpha 通道，则解析它；否则默认为半透明 (128)
+        // If an alpha channel is provided, parse it; otherwise, default to semi-transparent (128).
         let a = if s.len() == 8 {
             u8::from_str_radix(&s[6..8], 16).map_err(|_| ParseColorError(s.to_string()))?
         } else {
-            128 // 如果只提供RRGGBB，alpha 默认设为半透明
+            128 // Default alpha to semi-transparent if only RRGGBB is provided.
         };
 
         Ok(HexColor(Rgba([r, g, b, a])))
     }
 }
 
-// 为 clap 显示默认值需要 Display trait
+// The Display trait is required for clap to show the default value.
 impl std::fmt::Display for HexColor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:02x}{:02x}{:02x}{:02x}", self.0[0], self.0[1], self.0[2], self.0[3])
@@ -97,10 +97,10 @@ impl FromStr for WatermarkPosition {
     }
 }
 
-// 为 clap 显示默认值需要 Display trait
+// The Display trait is required for clap to show the default value.
 impl std::fmt::Display for WatermarkPosition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // 将枚举转换为小写字符串
+        // Convert the enum variant to a lowercase string.
         write!(f, "{}", format!("{:?}", self).to_lowercase())
     }
-}   
+}
