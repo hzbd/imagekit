@@ -93,6 +93,20 @@ If you want to resize without quality loss for JPEGs, use `--quality 100`.
 -   `west`: West, `center`: Center, `east`: East
 -   `sw`: South-West, `south`: South, `se`: South-East
 
+## Demo
+
+```
+./target/release/imagekit -i img-src \
+    -o img-out/ \
+    --width 512 \
+    --watermark-text "©良辰 | ちよ | 서연 | Stella | Éléonore | แก้ว" \
+    --watermark-position se \
+    --font-size 18 \
+    --watermark-color ffffffFF
+```
+
+![Demo Watermark](./example/img-out/markus-winkler.webp)
+
 ## 🛠️ Development & Testing
 
 If you'd like to contribute to the project:
