@@ -93,6 +93,20 @@
 -   `west`: 中左, `center`: 居中, `east`: 中右
 -   `sw`: 左下, `south`: 中下, `se`: 右下
 
+## 演示
+
+```
+./target/release/imagekit -i img-src \
+    -o img-out/ \
+    --width 512 \
+    --watermark-text "©良辰 | ちよ | 서연 | Stella | Éléonore | แก้ว" \
+    --watermark-position se \
+    --font-size 18 \
+    --watermark-color ffffffFF
+```
+
+![Demo Watermark](./example/img-out/markus-winkler.webp)
+
 ## 🛠️ 开发与测试
 
 如果你想为此项目贡献代码，可以按以下步骤操作：
