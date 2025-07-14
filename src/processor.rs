@@ -59,7 +59,7 @@ pub fn process_image(path: &Path, cli: &Cli, fonts: &[Font<'static>]) -> Result<
     match ext.as_str() {
         "jpg" | "jpeg" => {
             let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(writer, cli.quality);
-            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color())?;
+            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())?;
         },
         "png" => {
             let compression = match cli.quality {
@@ -68,7 +68,7 @@ pub fn process_image(path: &Path, cli: &Cli, fonts: &[Font<'static>]) -> Result<
                 _ => CompressionType::Default,
             };
             let encoder = PngEncoder::new_with_quality(writer, compression, FilterType::Sub);
-            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color())?;
+            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())?;
         },
         _ => { img.save(&output_path)?; }
     }

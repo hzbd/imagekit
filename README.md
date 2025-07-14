@@ -10,13 +10,13 @@
 
 ## 🌟 Features
 
-- **Batch Processing**: Recursively processes all images (`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`) in a specified input directory.
+- **Batch Processing**: Recursively processes all images (`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`，`.webp`) in a specified input directory.
 - **Smart Scaling**:
     - If only a width is provided, the height is calculated automatically to maintain the aspect ratio.
     - If only a height is provided, the width is calculated automatically.
 - **Quality Control**: Use the `-q` or `--quality` flag (1-100) to fine-tune the output quality, balancing file size and visual fidelity. Set to `100` for the best possible quality.
 - **Powerful Watermarking**:
-    - **Multi-language Support**: Perfectly renders watermarks with mixed text, including **Chinese, Japanese, Korean (CJK)**, and Latin characters.
+    - **Multi-language Support**: Perfectly renders watermarks with mixed text, supporting major world scripts including Latin (for English, French, Spanish), Cyrillic (for Russian), Thai, and CJK (Chinese, Japanese, Korean)..
     - **Highly Customizable**: Add text watermarks in nine standard positions and freely set the font size.
     - **Custom Colors**: Precisely control watermark color and opacity using hex codes (e.g., `RRGGBB` or `RRGGBBAA`).
     - **Intelligent Watermark Scaling**: If the requested watermark is too large for an image, it is automatically scaled down to fit perfectly, ensuring it is never cropped.

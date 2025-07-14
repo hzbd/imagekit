@@ -21,27 +21,26 @@ pub fn run(cli: Cli) -> Result<()> {
         fs::create_dir_all(&cli.output_dir)?;
     }
 
-    // 从嵌入的资源加载字体 (从 assets 模块)
-    // 1. 加载主字体数据并获得其所有权
     let primary_font_data = Asset::get("Roboto-Regular.ttf")
         .context("Could not find font 'Roboto-Regular.ttf'")?;
-    // .into_owned() 将 Cow<'static, [u8]> 转换为 Vec<u8>，我们现在拥有了数据。
     let primary_font_vec: Vec<u8> = primary_font_data.data.into_owned();
-
-    // 2. 加载备用 CJK 字体数据并获得其所有权
-    let fallback_font_data = Asset::get("SourceHanSansSC-Regular.otf")
-        .context("Could not find CJK font 'SourceHanSansSC-Regular.otf'")?;
-    let fallback_font_vec: Vec<u8> = fallback_font_data.data.into_owned();
-
-    // 3. 从我们拥有的数据中创建 Font 对象
-    //    由于 Vec<u8> 是 'static 的，所以 Font 也是 Font<'static>
     let primary_font = Font::try_from_vec(primary_font_vec)
         .context("Error constructing primary font")?;
-    let fallback_font = Font::try_from_vec(fallback_font_vec)
+
+    let cjk_font_data = Asset::get("SourceHanSansSC-Regular.otf")
+        .context("Could not find CJK font 'SourceHanSansSC-Regular.otf'")?;
+    let cjk_font_vec: Vec<u8> = cjk_font_data.data.into_owned();
+    let cjk_font = Font::try_from_vec(cjk_font_vec)
         .context("Error constructing CJK font")?;
 
-    let fonts = Arc::new(vec![primary_font, fallback_font]);
-    
+    let thai_font_data = Asset::get("NotoSansThai-Regular.ttf")
+        .context("Could not find Thai font 'NotoSansThai-Regular.ttf'")?;
+    let thai_font_vec: Vec<u8> = thai_font_data.data.into_owned();
+    let thai_font = Font::try_from_vec(thai_font_vec)
+        .context("Error constructing Thai font")?;
+
+    let fonts = Arc::new(vec![primary_font, cjk_font, thai_font]);
+
     // 收集所有图片路径
     let image_paths: Vec<PathBuf> = walkdir::WalkDir::new(&cli.input_dir)
         .into_iter()
@@ -49,7 +48,7 @@ pub fn run(cli: Cli) -> Result<()> {
         .filter(|e| {
             e.path().is_file() &&
                 e.path().extension().and_then(|s| s.to_str()).map_or(false, |s| {
-                    matches!(s.to_lowercase().as_str(), "jpg" | "jpeg" | "png" | "gif" | "bmp")
+                    matches!(s.to_lowercase().as_str(), "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp")
                 })
         })
         .map(|e| e.path().to_path_buf())

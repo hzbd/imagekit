@@ -1,11 +1,11 @@
 [package]
 name = "imagekit"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
-image = "0.24"
+image = { version = "0.25.6", features = ["webp"] }
 rusttype = "0.9"
 walkdir = "2.4"
 rayon = "1.8"
