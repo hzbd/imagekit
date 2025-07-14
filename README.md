@@ -10,7 +10,7 @@
 
 ## 🌟 Features
 
-- **Batch Processing**: Recursively processes all images (`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`，`.webp`) in a specified input directory.
+- **Batch Processing**: Recursively processes all images (`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.webp`) in a specified input directory.
 - **Smart Scaling**:
     - If only a width is provided, the height is calculated automatically to maintain the aspect ratio.
     - If only a height is provided, the width is calculated automatically.
