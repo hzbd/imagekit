@@ -3,42 +3,40 @@ use image::{DynamicImage, GenericImageView, Rgba};
 use tempfile::tempdir;
 use std::fs;
 
-// 导入我们库中的公共项
+// Import public items from our library.
 use imagekit::{
     assets::Asset,
     cli::{Cli, HexColor, WatermarkPosition},
     processor::add_watermark,
     run,
 };
-// 导入 Font 以便在测试中创建
+// Import `Font` to be able to create it in tests.
 use rusttype::Font;
 
-/// 辅助函数，用于在测试中加载字体列表。
-/// 它通过获取数据所有权来解决生命周期问题。
+/// Helper function to load a list of fonts for testing.
+/// It solves lifetime issues by taking ownership of the data.
 fn load_test_fonts() -> Result<Vec<Font<'static>>> {
-    // --- 解决方案在这里 ---
-    // 1. 加载主字体数据并获得其所有权
+    // 1. Load primary font data and take ownership.
     let primary_font_data = Asset::get("Roboto-Regular.ttf")
         .context("Test setup failed: Could not find 'Roboto-Regular.ttf'")?;
     let primary_font_vec: Vec<u8> = primary_font_data.data.into_owned();
 
-    // 2. 加载备用 CJK 字体数据并获得其所有权
+    // 2. Load fallback CJK font data and take ownership.
     let fallback_font_data = Asset::get("SourceHanSansSC-Regular.otf")
         .context("Test setup failed: Could not find 'SourceHanSansSC-Regular.otf'")?;
     let fallback_font_vec: Vec<u8> = fallback_font_data.data.into_owned();
 
-    // 3. 从我们拥有的数据中创建 Font 对象
+    // 3. Create Font objects from our owned data.
     let primary_font = Font::try_from_vec(primary_font_vec)
         .context("Test setup failed: Could not parse 'Roboto-Regular.ttf'")?;
     let fallback_font = Font::try_from_vec(fallback_font_vec)
         .context("Test setup failed: Could not parse 'SourceHanSansSC-Regular.otf'")?;
-    // --- 结束解决方案 ---
 
     Ok(vec![primary_font, fallback_font])
 }
 
 
-/// 测试水印位置的字符串解析是否正确。
+/// Tests that watermark position parsing from a string is correct.
 #[test]
 fn test_watermark_position_from_str() {
     use std::str::FromStr;
@@ -46,7 +44,7 @@ fn test_watermark_position_from_str() {
     assert!(WatermarkPosition::from_str("top-left").is_err());
 }
 
-/// 测试十六进制颜色码的解析。
+/// Tests hex color code parsing.
 #[test]
 fn test_hex_color_parsing() {
     use std::str::FromStr;
@@ -60,7 +58,7 @@ fn test_hex_color_parsing() {
     assert!(HexColor::from_str("GGFFFF").is_err());
 }
 
-/// 单元测试：验证 `add_watermark` 函数是否确实修改了图片。
+/// Unit test: Verifies that the `add_watermark` function actually modifies the image.
 #[test]
 fn test_add_watermark_logic() -> Result<()> {
     let mut img = DynamicImage::ImageRgba8(
@@ -83,7 +81,7 @@ fn test_add_watermark_logic() -> Result<()> {
     Ok(())
 }
 
-/// 集成测试：模拟一次完整的命令行运行，包括调整尺寸和添加水印。
+/// Integration test: Simulates a full command-line run, including resizing and watermarking.
 #[test]
 fn test_full_run_with_resize_and_watermark() -> Result<()> {
     let input_dir = tempdir()?;
@@ -104,6 +102,7 @@ fn test_full_run_with_resize_and_watermark() -> Result<()> {
         font_size: 16,
         watermark_color: HexColor(Rgba([255, 255, 255, 128])),
         quality: 85,
+        output_format: None, // FIX: Added missing field.
     };
 
     run(cli)?;
@@ -120,7 +119,7 @@ fn test_full_run_with_resize_and_watermark() -> Result<()> {
     Ok(())
 }
 
-/// 测试：当只提供宽度时，是否能按比例缩放。
+/// Test: Ensures proportional scaling works when only width is provided.
 #[test]
 fn test_run_proportional_resize_by_width() -> Result<()> {
     let input_dir = tempdir()?;
@@ -139,6 +138,7 @@ fn test_run_proportional_resize_by_width() -> Result<()> {
         font_size: 24,
         watermark_color: HexColor(Rgba([255, 255, 255, 128])),
         quality: 85,
+        output_format: None, // FIX: Added missing field.
     };
 
     run(cli)?;
@@ -152,7 +152,7 @@ fn test_run_proportional_resize_by_width() -> Result<()> {
     Ok(())
 }
 
-/// 测试：当只提供高度时，是否能按比例缩放。
+/// Test: Ensures proportional scaling works when only height is provided.
 #[test]
 fn test_run_proportional_resize_by_height() -> Result<()> {
     let input_dir = tempdir()?;
@@ -171,6 +171,7 @@ fn test_run_proportional_resize_by_height() -> Result<()> {
         font_size: 24,
         watermark_color: HexColor(Rgba([255, 255, 255, 128])),
         quality: 85,
+        output_format: None, // FIX: Added missing field.
     };
 
     run(cli)?;
@@ -184,7 +185,7 @@ fn test_run_proportional_resize_by_height() -> Result<()> {
     Ok(())
 }
 
-/// 测试：当请求的字体大小对于图片来说过大时，水印应能被自动缩小以适应图片。
+/// Test: Ensures the watermark autoscales down when it's too large for the image.
 #[test]
 fn test_watermark_autoscales_down_when_too_large() -> Result<()> {
     let mut img = DynamicImage::ImageRgba8(
@@ -215,14 +216,14 @@ fn test_watermark_autoscales_down_when_too_large() -> Result<()> {
     Ok(())
 }
 
-/// 验证质量参数是否对文件大小产生影响
+/// Verifies that the quality parameter affects the final file size.
 #[test]
 fn test_quality_options_affect_file_size() -> Result<()> {
     let input_dir = tempdir()?;
     let test_image_path = input_dir.path().join("quality_test.jpg");
     image::RgbImage::new(200, 200).save(&test_image_path)?;
 
-    // 1. 使用低质量保存
+    // 1. Save with low quality.
     let low_q_output_dir = tempdir()?;
     let cli_low = Cli {
         input_dir: input_dir.path().to_path_buf(),
@@ -231,11 +232,12 @@ fn test_quality_options_affect_file_size() -> Result<()> {
         width: None, height: None, watermark_text: None,
         watermark_position: WatermarkPosition::Se, font_size: 24,
         watermark_color: HexColor(Rgba([255,255,255,128])),
+        output_format: None, // FIX: Added missing field.
     };
     run(cli_low)?;
     let low_q_size = fs::metadata(low_q_output_dir.path().join("quality_test.jpg"))?.len();
 
-    // 2. 使用高质量保存
+    // 2. Save with high quality.
     let high_q_output_dir = tempdir()?;
     let cli_high = Cli {
         input_dir: input_dir.path().to_path_buf(),
@@ -244,6 +246,7 @@ fn test_quality_options_affect_file_size() -> Result<()> {
         width: None, height: None, watermark_text: None,
         watermark_position: WatermarkPosition::Se, font_size: 24,
         watermark_color: HexColor(Rgba([255,255,255,128])),
+        output_format: None, // FIX: Added missing field.
     };
     run(cli_high)?;
     let high_q_size = fs::metadata(high_q_output_dir.path().join("quality_test.jpg"))?.len();
@@ -254,39 +257,37 @@ fn test_quality_options_affect_file_size() -> Result<()> {
     Ok(())
 }
 
-// 验证 CJK 字符支持
+// Verifies CJK character support.
 #[test]
 fn test_cjk_watermark_support() -> Result<()> {
-    // 1. 准备一个已知背景的图片
+    // 1. Prepare an image with a known background.
     let mut img = DynamicImage::ImageRgba8(
         image::RgbaImage::from_pixel(300, 100, Rgba([255, 255, 255, 255]))
     );
-    // 2. 复制一份处理前的图片字节数据
+    // 2. Clone the image byte data before processing.
     let original_img_bytes = img.as_bytes().to_vec();
 
     let fonts = load_test_fonts()?;
 
-    // 3. 执行水印操作
+    // 3. Perform the watermarking operation.
     add_watermark(
         &mut img,
-        "测试 Test 123 テスト", // 混合了中文、英文、数字和日文
+        "测试 Test 123 テスト", // Mixed Chinese, English, numbers, and Japanese.
         &fonts,
         30,
         WatermarkPosition::Center,
-        HexColor(Rgba([0, 0, 0, 128])), // 半透明黑色
+        HexColor(Rgba([0, 0, 0, 128])), // Semi-transparent black.
     );
 
-    // 4. 获取处理后的图片字节数据
+    // 4. Get the image byte data after processing.
     let watermarked_img_bytes = img.as_bytes().to_vec();
 
-    // --- 解决方案在这里：使用更健壮的断言 ---
-    // 断言图片内容被修改过，证明水印被画上去了，无论画在哪里
+    // Assert that the image content was modified, proving the watermark was drawn.
     assert_ne!(
         original_img_bytes,
         watermarked_img_bytes,
         "CJK watermark should have been applied, changing the image content"
     );
-    // --- 结束解决方案 ---
 
     Ok(())
 }
