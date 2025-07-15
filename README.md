@@ -53,22 +53,22 @@ You will need to have [Rust and Cargo](https://www.rust-lang.org/tools/install) 
 #### Example 1: Add a watermark with mixed Chinese and English text
 ```bash
 ./target/release/imagekit \
-    -i ./input_photos \
-    -o ./processed_photos \
+    -i example/img-src \
+    -o example/img-out \
     --watermark-text "你好, World! - Test Watermark"
 ```
 
 #### Example 2: Resize images and save at maximum quality
 If you want to resize without quality loss for JPEGs, use `--quality 100`.
 ```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --width 1024 --quality 100
+./target/release/imagekit -i example/img-src -o example/img-out --width 1024 --quality 100
 ```
 
 #### Example 3: Add an opaque black watermark (using default quality 85)
 ```bash
 ./target/release/imagekit \
-    -i ./input_photos \
-    -o ./processed_photos \
+    -i example/img-src \
+    -o example/img-out \
     --watermark-text "Confidential" \
     --watermark-color 000000FF
 ```
@@ -86,6 +86,7 @@ If you want to resize without quality loss for JPEGs, use `--quality 100`.
 | Font Size          | `--font-size`              | (Optional) The font size of the watermark text in pixels.                 | Optional          | `24`                |
 | Watermark Color    | `--watermark-color`        | (Optional) Watermark color in RRGGBB or RRGGBBAA hex format.              | Optional          | `FFFFFF80` (semi-transparent white) |
 | Quality            | `-q`, `--quality`          | (Optional) Set output quality (1-100). Affects JPEG and PNG compression.  | Optional          | `85`                |
+| Output Format      | `--output-format`          | (Optional) Specify the output image format.                               | Optional          | Original format     |
 
 #### Available values for `watermark-position`:
 
@@ -96,16 +97,17 @@ If you want to resize without quality loss for JPEGs, use `--quality 100`.
 ## Demo
 
 ```
-./target/release/imagekit -i img-src \
+./target/release/imagekit -i example/img-src \
     -o img-out/ \
-    --width 512 \
+    --height 512 \
     --watermark-text "©良辰 | ちよ | 서연 | Stella | Éléonore | แก้ว" \
     --watermark-position se \
     --font-size 18 \
-    --watermark-color ffffffFF
+    --watermark-color ffffffFF \
+    --output-format png
 ```
 
-![Demo Watermark](./example/img-out/markus-winkler.webp)
+![Demo Watermark](./example/img-out/markus-winkler.png)
 
 ## 🛠️ Development & Testing
 

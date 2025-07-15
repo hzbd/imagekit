@@ -1,10 +1,10 @@
 use anyhow::Result;
 use clap::Parser;
-use imagekit::cli::Cli; // 从我们自己的库中导入 Cli
+use imagekit::cli::Cli;
 
 fn main() -> Result<()> {
-    // 1. 解析命令行参数
+    // 1. Parse command-line arguments.
     let cli = Cli::parse();
-    // 2. 调用库中的核心运行逻辑
+    // 2. Call the core run logic from the library.
     imagekit::run(cli)
 }

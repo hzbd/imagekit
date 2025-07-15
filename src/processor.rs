@@ -1,20 +1,20 @@
 use super::cli::{Cli, HexColor, WatermarkPosition};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-use image::{DynamicImage, GenericImage, GenericImageView, ImageEncoder, Pixel};
+use image::{DynamicImage, GenericImage, GenericImageView, ImageEncoder, Pixel, ImageFormat};
 use rusttype::{point, Font, PositionedGlyph, Scale};
 use std::fs;
 use std::io::BufWriter;
 use std::path::Path;
 
-/// 处理单张图片的核心函数
+/// The core function for processing a single image.
 pub fn process_image(path: &Path, cli: &Cli, fonts: &[Font<'static>]) -> Result<()> {
     println!("Processing {}...", path.display());
 
     let mut img = image::open(path)?;
     let (original_width, original_height) = img.dimensions();
 
-    // 智能尺寸调整逻辑
+    // Smart resizing logic.
     let mut needs_resize = false;
     let (new_width, new_height) = match (cli.width, cli.height) {
         (Some(w), None) => {
@@ -46,39 +46,27 @@ pub fn process_image(path: &Path, cli: &Cli, fonts: &[Font<'static>]) -> Result<
     }
 
     let relative_path = path.strip_prefix(&cli.input_dir)?;
-    let output_path = cli.output_dir.join(relative_path);
+    let base_output_path = cli.output_dir.join(relative_path);
 
-    if let Some(parent) = output_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
+    let (final_path, image_format) = if let Some(format_arg) = &cli.output_format {
+        // Case 1: User specified an output format.
+        let format: ImageFormat = format_arg.clone().into();
+        let path = base_output_path.with_extension(format.extensions_str()[0]);
+        (path, format)
+    } else {
+        // Case 2: User did not specify a format; infer from the original path.
+        let format = ImageFormat::from_path(&base_output_path)?;
+        (base_output_path, format)
+    };
+    save_image_with_format(&img, &final_path, image_format, cli.quality)
+        .with_context(|| format!("Failed to save image to {}", final_path.display()))?;
 
-    // 图片保存逻辑
-    let file = fs::File::create(&output_path)?;
-    let writer = BufWriter::new(file);
-    let ext = output_path.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
-    match ext.as_str() {
-        "jpg" | "jpeg" => {
-            let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(writer, cli.quality);
-            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())?;
-        },
-        "png" => {
-            let compression = match cli.quality {
-                100 => CompressionType::Best,
-                1..=50 => CompressionType::Fast,
-                _ => CompressionType::Default,
-            };
-            let encoder = PngEncoder::new_with_quality(writer, compression, FilterType::Sub);
-            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())?;
-        },
-        _ => { img.save(&output_path)?; }
-    }
-
-    println!("Saved to {}", output_path.display());
+    println!("Saved to {}", final_path.display());
     Ok(())
 }
 
-/// 根据字体列表、缩放和文本，计算并布局字形，支持字体回退。
-/// 返回一个包含所有已定位字形的向量，以及整个文本的精确像素边界框信息。
+/// Lays out glyphs for the given text, scale, and list of fonts, with fallback support.
+/// Returns a vector of positioned glyphs, along with the precise pixel bounding box of the entire text.
 fn layout_text<'a>(
     text: &str,
     scale: Scale,
@@ -116,7 +104,7 @@ fn layout_text<'a>(
         glyphs.push(positioned_glyph);
     }
 
-    // 在所有字形都布局好之后，再计算整体的像素边界框
+    // After all glyphs are laid out, calculate the overall pixel bounding box.
     let (min_x, max_x, min_y, max_y) = glyphs
         .iter()
         .filter_map(|g| g.pixel_bounding_box())
@@ -131,8 +119,8 @@ fn layout_text<'a>(
     (glyphs, text_width, text_height, final_min_x)
 }
 
-/// 在图片上绘制水印，并能自动缩小过大的水印，同时精确定位。
-/// 此版本支持 CJK 字符回退。
+/// Draws a watermark on the image, with auto-scaling for oversized text and precise positioning.
+/// This version supports CJK character fallback.
 pub fn add_watermark(
     img: &mut DynamicImage,
     text: &str,
@@ -202,4 +190,40 @@ pub fn add_watermark(
             });
         }
     }
+}
+
+/// Saves an image using the specified format and quality, encapsulating detailed encoding logic.
+fn save_image_with_format(
+    img: &image::DynamicImage,
+    path: &Path,
+    format: ImageFormat,
+    quality: u8,
+) -> Result<()> {
+    // Ensure the output directory exists.
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let mut writer = BufWriter::new(fs::File::create(path)?);
+
+    match format {
+        ImageFormat::Jpeg => {
+            let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut writer, quality);
+            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())?;
+        }
+        ImageFormat::Png => {
+            let compression = match quality {
+                100 => CompressionType::Best,
+                1..=50 => CompressionType::Fast,
+                _ => CompressionType::Default,
+            };
+            let encoder = PngEncoder::new_with_quality(&mut writer, compression, FilterType::Sub);
+            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())?;
+        }
+        // A robust fallback for all other formats (e.g., WebP, BMP, GIF).
+        _ => {
+            img.write_to(&mut writer, format)?;
+        }
+    }
+    Ok(())
 }

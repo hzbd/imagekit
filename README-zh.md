@@ -53,23 +53,23 @@
 #### 示例 1: 添加包含中英文的水印
 ```bash
 ./target/release/imagekit \
-    -i ./input_photos \
-    -o ./processed_photos \
-    --watermark-text "你好, World! - 测试水印"
+    -i example/img-src \
+    -o example/img-out \
+    --watermark-text "你好, World! - 印记"
 ```
 
 #### 示例 2: 缩放图片并以最高质量保存
 如果你希望调整尺寸但不损失图片质量，请使用 `--quality 100`。
 ```bash
-./target/release/imagekit -i ./input_photos -o ./processed_photos --width 1024 --quality 100
+./target/release/imagekit -i example/img-src -o example/img-out --width 1024 --quality 100
 ```
 
 #### 示例 3: 添加一个不透明的黑色水印（使用默认质量 85）
 ```bash
 ./target/release/imagekit \
-    -i ./input_photos \
-    -o ./processed_photos \
-    --watermark-text "机密文件" \
+    -i example/img-src \
+    -o example/img-out \
+    --watermark-text "@机密文件" \
     --watermark-color 000000FF
 ```
 
@@ -86,6 +86,7 @@
 | 字体大小             | `--font-size`        | （可选）水印文字的大小（单位：像素）。                                  | 可选      | `24`     |
 | 水印颜色             | `--watermark-color`  | （可选）水印颜色，格式为 RRGGBB 或 RRGGBBAA。                           | 可选      | `FFFFFF80` (半透明白) |
 | 质量                 | `-q`, `--quality`    | （可选）设置输出质量(1-100)。对于JPEG，影响压缩率；对于PNG，影响压缩速度。 | 可选      | `85`     |
+| 输出格式             | `--output-format`    | （可选）指定输出图片的格式。                                              | 可选      | 原始格式 |
 
 #### `watermark-position` 的可用值:
 
@@ -96,16 +97,17 @@
 ## 演示
 
 ```
-./target/release/imagekit -i img-src \
-    -o img-out/ \
+./target/release/imagekit -i example/img-src \
+    -o example/img-out/ \
     --width 512 \
     --watermark-text "©良辰 | ちよ | 서연 | Stella | Éléonore | แก้ว" \
     --watermark-position se \
     --font-size 18 \
-    --watermark-color ffffffFF
+    --watermark-color ffffffFF \
+    --output-format png
 ```
 
-![Demo Watermark](./example/img-out/markus-winkler.webp)
+![Demo Watermark](./example/img-out/markus-winkler.png)
 
 ## 🛠️ 开发与测试
 

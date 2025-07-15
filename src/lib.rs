@@ -14,9 +14,9 @@ use assets::Asset;
 use cli::Cli;
 use processor::process_image;
 
-// 这个 run 函数现在是库的公共 API 的一部分
+// The `run` function is now part of the library's public API.
 pub fn run(cli: Cli) -> Result<()> {
-    // 检查并创建输出目录
+    // Check and create the output directory if it doesn't exist.
     if !cli.output_dir.exists() {
         fs::create_dir_all(&cli.output_dir)?;
     }
@@ -41,7 +41,7 @@ pub fn run(cli: Cli) -> Result<()> {
 
     let fonts = Arc::new(vec![primary_font, cjk_font, thai_font]);
 
-    // 收集所有图片路径
+    // Collect all image paths from the input directory.
     let image_paths: Vec<PathBuf> = walkdir::WalkDir::new(&cli.input_dir)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -61,11 +61,11 @@ pub fn run(cli: Cli) -> Result<()> {
 
     println!("Found {} images to process.", image_paths.len());
 
-    // 使用 Rayon 并行处理图片
+    // Use Rayon to process images in parallel.
     image_paths.par_iter().for_each(move |path| {
-        // 克隆 Arc 指针，这是一个轻量级的操作
+        // Clone the Arc pointer, which is a lightweight operation.
         let fonts_clone = Arc::clone(&fonts);
-        // Rust 会自动将 &Arc<Vec<Font>> 解引用为 &[Font]
+        // Rust automatically dereferences `&Arc<Vec<Font>>` to `&[Font]`.
         if let Err(e) = process_image(path, &cli, &fonts_clone) {
             eprintln!("Failed to process {}: {}", path.display(), e);
         }
