@@ -39,6 +39,7 @@ You will need to have [Rust and Cargo](https://www.rust-lang.org/tools/install) 
     ```
 
 3.  **Locate the Executable**
+
     After building, the executable will be located in the `target/release/` directory.
 
 ## 🚀 Usage
