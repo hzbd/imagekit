@@ -98,7 +98,7 @@ If you want to resize without quality loss for JPEGs, use `--quality 100`.
 
 ```
 ./target/release/imagekit -i example/img-src \
-    -o img-out/ \
+    -o example/img-out/ \
     --height 512 \
     --watermark-text "©良辰 | ちよ | 서연 | Stella | Éléonore | แก้ว" \
     --watermark-position se \
