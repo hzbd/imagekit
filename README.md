@@ -33,17 +33,12 @@ You will need to have [Rust and Cargo](https://www.rust-lang.org/tools/install) 
     cd imagekit
     ```
 
-2.  **Prepare Fonts**
-    This tool uses a font fallback system for multi-language support. Please ensure the `assets/` directory contains:
-    *   `Roboto-Regular.ttf` (for Western characters)
-    *   A font with CJK support, such as `SourceHanSansSC-Regular.otf` (Source Han Sans). You can download it from [Adobe Fonts GitHub](https://github.com/adobe-fonts/source-han-sans/releases).
-
-3.  **Build the Project**
+2.  **Build the Project**
     ```bash
     cargo build --release
     ```
 
-4.  **Locate the Executable**
+3.  **Locate the Executable**
     After building, the executable will be located in the `target/release/` directory.
 
 ## 🚀 Usage
