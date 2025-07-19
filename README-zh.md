@@ -23,6 +23,8 @@
 - **⚡ 极速性能**: 利用 [Rayon](https://github.com/rayon-rs/rayon) 库并行处理图片，充分利用多核 CPU 的性能。
 - **跨平台**: 可在 Windows, macOS, 和 Linux 上编译和运行。
 
+![Demo Watermark](./example/img-out/markus-winkler.png)
+
 ## ⚙️ 安装与构建
 
 你需要先安装 [Rust 和 Cargo](https://www.rust-lang.org/tools/install)。
@@ -102,8 +104,6 @@
     --watermark-color ffffffFF \
     --output-format png
 ```
-
-![Demo Watermark](./example/img-out/markus-winkler.png)
 
 ## 🛠️ 开发与测试
 

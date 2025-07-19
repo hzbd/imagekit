@@ -23,6 +23,8 @@
 - **⚡ Blazing Fast Performance**: Utilizes the [Rayon](https://github.com/rayon-rs/rayon) library to process images in parallel, taking full advantage of multi-core CPUs.
 - **Cross-Platform**: Compiles and runs on Windows, macOS, and Linux.
 
+![Demo Watermark](./example/img-out/markus-winkler.png)
+
 ## ⚙️ Installation & Build
 
 You will need to have [Rust and Cargo](https://www.rust-lang.org/tools/install) installed.
@@ -102,8 +104,6 @@ If you want to resize without quality loss for JPEGs, use `--quality 100`.
     --watermark-color ffffffFF \
     --output-format png
 ```
-
-![Demo Watermark](./example/img-out/markus-winkler.png)
 
 ## 🛠️ Development & Testing
 
