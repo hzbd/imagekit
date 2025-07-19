@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  # 2. Manual trigger
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The git tag to build, e.g., v1.2.3'
+        required: true
 
 # permissions: Defines the permissions required for this workflow.
 permissions:
