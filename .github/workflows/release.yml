@@ -61,7 +61,7 @@ jobs:
           mkdir -p ./.cargo
           echo '[target.aarch64-unknown-linux-gnu]' >> ./.cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> ./.cargo/config.toml
-          
+
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -71,16 +71,24 @@ jobs:
         run: cargo build --release --target ${{ matrix.rust-target }} --locked
 
       # - name: Prepare binary for upload (strip and rename)
-      - name: Prepare binary for upload
+      - name: Prepare binary for upload (strip and rename)
         shell: bash
         run: |
           BINARY_NAME="imagekit"
           SOURCE_PATH="target/${{ matrix.rust-target }}/release/${BINARY_NAME}"
           DEST_PATH="./${{ matrix.asset-name }}"
+
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             mv "${SOURCE_PATH}.exe" "${DEST_PATH}"
           else
-            strip "${SOURCE_PATH}"
+            # Determine which strip command to use.
+            STRIP_COMMAND="strip" # Default strip command
+            if [[ "${{ matrix.rust-target }}" == "aarch64-unknown-linux-gnu" ]]; then
+              STRIP_COMMAND="aarch64-linux-gnu-strip"
+            fi
+
+            echo "Using strip command: ${STRIP_COMMAND}"
+            ${STRIP_COMMAND} "${SOURCE_PATH}"
             mv "${SOURCE_PATH}" "${DEST_PATH}"
           fi
           echo "Prepared asset: ${DEST_PATH}"
@@ -100,26 +108,31 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
+
       - name: Build and Prepare Artifact on FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
           run: |
-            # Step 1: Install dependencies
-            pkg install -y curl gcc
+            # Exit immediately if a command fails, for better error reporting.
+            set -e
 
-            # Step 2: Install Rust
+            # Install common C libraries required by the 'image' crate dependencies.
+            pkg install -y curl gcc jpeg-turbo png giflib
+
+            # Install Rust toolchain.
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             source "$HOME/.cargo/env"
 
-            # Step 3: Build the binary
+            # Build, strip, and prepare the artifact.
             cargo build --release --locked
-
-            # Step 4: Strip the binary for smaller size (Performance)
             strip "target/release/imagekit"
+            mv "target/release/imagekit" ./imagekit-freebsd-amd64
 
-            # Step 5 (FIX): Move the final binary to a predictable, top-level location
-            # This makes the copy-back process from the VM much more reliable.
-            mv "target/release/imagekit" ./imagekit-free
+      - name: Upload FreeBSD Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: imagekit-freebsd-amd64
+          path: ./imagekit-freebsd-amd64
 
   release:
     # needs: Wait for all build jobs to complete.
