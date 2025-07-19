@@ -117,14 +117,21 @@ jobs:
             set -e
 
             # Install common C libraries required by the 'image' crate dependencies.
-            pkg install -y curl gcc jpeg-turbo png giflib
+            pkg install -y curl gcc jpeg-turbo png giflib gmake
 
             # Install Rust toolchain.
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             source "$HOME/.cargo/env"
+            export PATH="$HOME/.cargo/bin:$PATH"
 
             # Build, strip, and prepare the artifact.
             cargo build --release --locked
+
+            if [ ! -f target/release/imagekit ]; then
+              echo "+++++ Binary not found!!! +++++"
+              exit 1
+            fi
+
             strip "target/release/imagekit"
             mv "target/release/imagekit" ./imagekit-freebsd-amd64
 
