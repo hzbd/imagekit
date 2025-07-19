@@ -4,20 +4,17 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  # 2. Manual trigger
   workflow_dispatch:
     inputs:
       tag:
-        description: 'The git tag to build, e.g., v1.2.3'
+        description: 'The git tag to build (e.g., v1.2.3). This tag MUST exist.'
         required: true
 
-# permissions: Defines the permissions required for this workflow.
 permissions:
   contents: write
 
 jobs:
-  # ARCHITECTURE FIX: New job to reliably determine the tag name first.
-  # This makes manual and automatic triggers equally reliable.
+  # Job 1: Reliably determine the tag name. This is the most secure approach.
   determine-tag:
     runs-on: ubuntu-latest
     outputs:
@@ -25,134 +22,114 @@ jobs:
     steps:
       - id: get_tag
         run: |
-          # Check which event triggered the workflow
+          # Case 1: Manual trigger
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "Running in manual mode for tag: ${{ github.event.inputs.tag }}"
+            echo "Running in MANUAL mode for tag: ${{ github.event.inputs.tag }}"
             echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "Running in automatic mode for tag: ${{ github.ref_name }}"
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            exit 0
           fi
-          
+
+          # Case 2: Automatic trigger (push)
+          # Rigorously check that the push was for a tag to prevent building from a branch.
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "Running in AUTOMATIC mode for tag: ${{ github.ref_name }}"
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "::error::This workflow was triggered by a non-tag push ('${{ github.ref }}'), which is not supported."
+            exit 1
+          fi
+
+  # Job 2: Build for standard platforms
   build:
+    needs: determine-tag
     strategy:
-      # fail-fast: false ensures that if one platform fails, the others will continue to build.
       fail-fast: false
       matrix:
         include:
-          # Build for macOS M-series (Apple Silicon).
           - rust-target: aarch64-apple-darwin
             os: macos-14
             asset-name: imagekit-macos-arm64
-          # Build for macOS Intel series.
           - rust-target: x86_64-apple-darwin
             os: macos-latest
             asset-name: imagekit-macos-intel
-          # Build for Linux (x64 / amd64). Both terms refer to the same x86_64 architecture.
           - rust-target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             asset-name: imagekit-linux-amd64
-          # Build for Raspberry Pi 4 (64-bit OS) via cross-compilation.
           - rust-target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             asset-name: imagekit-raspberry-pi4-arm64
-          # Build for Windows (amd64).
           - rust-target: x86_64-pc-windows-msvc
             os: windows-latest
             asset-name: imagekit-windows-amd64.exe
-
     runs-on: ${{ matrix.os }}
-
     steps:
-      - name: Checkout code
+      - name: Checkout correct tag
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.determine-tag.outputs.tag }}
 
-      # - name: Install cross-compilation linker (for Raspberry Pi)
-      #   Conditional step: only runs for the Raspberry Pi target.
       - name: Install cross-compilation linker (for Raspberry Pi)
         if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
         run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
-
       - name: Configure cross-linker for Raspberry Pi
         if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
         run: |
           mkdir -p ./.cargo
           echo '[target.aarch64-unknown-linux-gnu]' >> ./.cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> ./.cargo/config.toml
-
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust-target }}
-
       - name: Build binary
         run: cargo build --release --target ${{ matrix.rust-target }} --locked
-
-      # - name: Prepare binary for upload (strip and rename)
       - name: Prepare binary for upload (strip and rename)
         shell: bash
         run: |
           BINARY_NAME="imagekit"
           SOURCE_PATH="target/${{ matrix.rust-target }}/release/${BINARY_NAME}"
           DEST_PATH="./${{ matrix.asset-name }}"
-
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             mv "${SOURCE_PATH}.exe" "${DEST_PATH}"
           else
-            # Determine which strip command to use.
-            STRIP_COMMAND="strip" # Default strip command
+            STRIP_COMMAND="strip"
             if [[ "${{ matrix.rust-target }}" == "aarch64-unknown-linux-gnu" ]]; then
               STRIP_COMMAND="aarch64-linux-gnu-strip"
             fi
-
             echo "Using strip command: ${STRIP_COMMAND}"
             ${STRIP_COMMAND} "${SOURCE_PATH}"
             mv "${SOURCE_PATH}" "${DEST_PATH}"
           fi
           echo "Prepared asset: ${DEST_PATH}"
-
-      # - name: Upload artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset-name }}
           path: ./${{ matrix.asset-name }}
 
-  # build-freebsd: Dedicated job for FreeBSD, as it requires a VM. (Architecture)
+  # Job 3: Build for FreeBSD, incorporating your excellent debugging improvements
   build-freebsd:
+    needs: determine-tag
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout correct tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ needs.determine-tag.outputs.tag }}
 
       - name: Build and Prepare Artifact on FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
           run: |
-            # Exit immediately if a command fails, for better error reporting.
             set -e
-
-            # Install common C libraries required by the 'image' crate dependencies.
-            pkg install -y curl gcc jpeg-turbo png giflib gmake
-
-            # Install Rust toolchain.
+            pkg install -y curl gcc jpeg-turbo png giflib gmake # Your dependencies
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             . "$HOME/.cargo/env"
-            export PATH="$HOME/.cargo/bin:$PATH"
-            export CC=gcc
+            cargo build --release --locked --verbose # Your verbose flag
 
-            # DEBUG here...
-            rustc --version
-            cargo --version
-            # ..............
-
-            # Build, strip, and prepare the artifact.
-            cargo build --release --locked --verbose
-
+            # Your robust check for the binary
             if [ ! -f target/release/imagekit ]; then
-              echo "+++++ Binary not found!!! +++++"
+              echo "::error::Binary 'imagekit' not found after build!"
               exit 1
             fi
 
@@ -165,17 +142,18 @@ jobs:
           name: imagekit-freebsd-amd64
           path: ./imagekit-freebsd-amd64
 
+  # Job 4: Create the final release
   release:
-    # needs: Wait for all build jobs to complete.
-    needs: [build, build-freebsd]
+    needs: [determine-tag, build, build-freebsd] # Depends on all previous jobs
+    if: success() # Best practice: only release if all builds were successful
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-assets
-
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.determine-tag.outputs.tag }} # Reliably get the tag from the first job
           files: release-assets/**/*
