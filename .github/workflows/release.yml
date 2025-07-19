@@ -123,10 +123,18 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             source "$HOME/.cargo/env"
             export PATH="$HOME/.cargo/bin:$PATH"
+            export CC=gcc
+
 
             # Build, strip, and prepare the artifact.
-            cargo build --release --locked
+            rustc --version
+            cargo --version
+            cargo build --release --locked --verbose
 
+            # debug
+            ls
+            pwd
+            
             if [ ! -f target/release/imagekit ]; then
               echo "+++++ Binary not found!!! +++++"
               exit 1
