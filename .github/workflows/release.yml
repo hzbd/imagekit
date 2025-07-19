@@ -16,6 +16,24 @@ permissions:
   contents: write
 
 jobs:
+  # ARCHITECTURE FIX: New job to reliably determine the tag name first.
+  # This makes manual and automatic triggers equally reliable.
+  determine-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.get_tag.outputs.tag }}
+    steps:
+      - id: get_tag
+        run: |
+          # Check which event triggered the workflow
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Running in manual mode for tag: ${{ github.event.inputs.tag }}"
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "Running in automatic mode for tag: ${{ github.ref_name }}"
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+          
   build:
     strategy:
       # fail-fast: false ensures that if one platform fails, the others will continue to build.
