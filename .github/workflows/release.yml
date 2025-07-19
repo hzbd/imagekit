@@ -1,0 +1,118 @@
+name: Release Multi-Platform Binaries
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# permissions: Defines the permissions required for this workflow.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      # fail-fast: false ensures that if one platform fails, the others will continue to build.
+      fail-fast: false
+      matrix:
+        include:
+          # Build for macOS M-series (Apple Silicon).
+          - rust-target: aarch64-apple-darwin
+            os: macos-14
+            asset-name: imagekit-macos-arm64
+          # Build for macOS Intel series.
+          - rust-target: x86_64-apple-darwin
+            os: macos-latest
+            asset-name: imagekit-macos-intel
+          # Build for Linux (x64 / amd64). Both terms refer to the same x86_64 architecture.
+          - rust-target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            asset-name: imagekit-linux-amd64
+          # Build for Raspberry Pi 4 (64-bit OS) via cross-compilation.
+          - rust-target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            asset-name: imagekit-raspberry-pi4-arm64
+          # Build for Windows (amd64).
+          - rust-target: x86_64-pc-windows-msvc
+            os: windows-latest
+            asset-name: imagekit-windows-amd64.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # - name: Install cross-compilation linker (for Raspberry Pi)
+      #   Conditional step: only runs for the Raspberry Pi target.
+      - name: Install cross-compilation linker (for Raspberry Pi)
+        if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.rust-target }} --locked
+
+      # - name: Prepare binary for upload (strip and rename)
+      - name: Prepare binary for upload
+        shell: bash
+        run: |
+          BINARY_NAME="imagekit"
+          SOURCE_PATH="target/${{ matrix.rust-target }}/release/${BINARY_NAME}"
+          DEST_PATH="./${{ matrix.asset-name }}"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            mv "${SOURCE_PATH}.exe" "${DEST_PATH}"
+          else
+            strip "${SOURCE_PATH}"
+            mv "${SOURCE_PATH}" "${DEST_PATH}"
+          fi
+          echo "Prepared asset: ${DEST_PATH}"
+
+      # - name: Upload artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset-name }}
+          path: ./${{ matrix.asset-name }}
+
+  # build-freebsd: Dedicated job for FreeBSD, as it requires a VM. (Architecture)
+  build-freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build on FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          run: |
+            pkg install -y curl gcc
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+            source "$HOME/.cargo/env"
+            cargo build --release --locked
+            strip "target/release/imagekit"
+
+      - name: Upload FreeBSD Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: imagekit-freebsd-amd64
+          path: target/release/imagekit
+
+  release:
+    # needs: Wait for all build jobs to complete.
+    needs: [build, build-freebsd]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/**/*
