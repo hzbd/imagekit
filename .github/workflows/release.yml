@@ -55,6 +55,13 @@ jobs:
         if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
         run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
+      - name: Configure cross-linker for Raspberry Pi
+        if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p ./.cargo
+          echo '[target.aarch64-unknown-linux-gnu]' >> ./.cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> ./.cargo/config.toml
+          
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -91,22 +98,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Build on FreeBSD VM
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Build and Prepare Artifact on FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
           run: |
+            # Step 1: Install dependencies
             pkg install -y curl gcc
+
+            # Step 2: Install Rust
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             source "$HOME/.cargo/env"
+
+            # Step 3: Build the binary
             cargo build --release --locked
+
+            # Step 4: Strip the binary for smaller size (Performance)
             strip "target/release/imagekit"
 
-      - name: Upload FreeBSD Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: imagekit-freebsd-amd64
-          path: target/release/imagekit
+            # Step 5 (FIX): Move the final binary to a predictable, top-level location
+            # This makes the copy-back process from the VM much more reliable.
+            mv "target/release/imagekit" ./imagekit-free
 
   release:
     # needs: Wait for all build jobs to complete.
