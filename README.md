@@ -27,6 +27,9 @@
 
 ## ⚙️ Installation & Build
 
+> [!NOTE]
+> You can also directly download the pre-compiled binary package from the [release page](https://github.com/hzbd/imagekit/releases).
+
 You will need to have [Rust and Cargo](https://www.rust-lang.org/tools/install) installed.
 
 1.  **Clone the Repository**

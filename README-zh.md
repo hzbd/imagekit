@@ -27,6 +27,9 @@
 
 ## ⚙️ 安装与构建
 
+> [!NOTE]
+> 或者你可以直接到[release页面](https://github.com/hzbd/imagekit/releases)下载预先编译好的二进制包。
+
 你需要先安装 [Rust 和 Cargo](https://www.rust-lang.org/tools/install)。
 
 1.  **克隆仓库**
