@@ -7,7 +7,13 @@
 **ImageKit** is a powerful, fast, and flexible command-line tool for batch image processing. Written in Rust, it leverages parallel processing to maximize performance, allowing you to effortlessly resize, control the quality of, and add highly customizable watermarks to entire directories of images.
 
 > [!IMPORTANT]
-> **Project Status:** This project is now in **maintenance mode**. No new features will be added, but bug fixes will be provided. I will soon be releasing a more advanced image watermarking tool. Stay tuned!
+> **Migration Notice:** This project is now in **Maintenance Mode** (bug fixes only).
+>
+> We are excited to announce the release of **[ImageKit2](https://github.com/hzbd/imagekit2)**! 🚀
+>
+> **ImageKit2** is a complete rewrite powered by **Rust**. It provides the same easy-to-use Python bindings but with **significantly higher performance**, better memory safety, and modern features.
+>
+> 👉 **Please upgrade here:** [https://github.com/hzbd/imagekit2](https://github.com/hzbd/imagekit2)
 
 [中文](./README-zh.md)
 
